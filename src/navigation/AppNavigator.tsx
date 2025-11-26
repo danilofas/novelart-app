@@ -1,9 +1,10 @@
-import React from 'react';
+import React, {useEffect, useRef} from 'react';
 import {Text, StyleSheet} from 'react-native';
-import {NavigationContainer} from '@react-navigation/native';
+import {NavigationContainer, NavigationContainerRef} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import type {RootStackParamList, BottomTabParamList} from '../types';
+import notificationService from '../services/notifications';
 
 // Auth Screens
 import LoginScreen from '../screens/auth/LoginScreen';
@@ -89,8 +90,20 @@ const TabNavigator = () => {
 };
 
 const AppNavigator = () => {
+  const navigationRef = useRef<NavigationContainerRef<RootStackParamList>>(null);
+
+  useEffect(() => {
+    // Set up notification navigation callback when navigation is ready
+    notificationService.setNavigationCallback((screen, params) => {
+      if (navigationRef.current?.isReady()) {
+        // Type-safe navigation with params
+        navigationRef.current.navigate(screen as keyof RootStackParamList, params as never);
+      }
+    });
+  }, []);
+
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef}>
       <Stack.Navigator
         screenOptions={{
           headerShown: false,

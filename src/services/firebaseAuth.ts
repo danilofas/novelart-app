@@ -4,9 +4,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {authService} from './api';
 
 // Configure Google Sign-In
+// Note: Replace with actual web client ID from Firebase Console > Authentication > Sign-in method > Google
+// The web client ID should be in the format: YOUR_CLIENT_ID.apps.googleusercontent.com
+// For production, this should be loaded from environment variables or a config file
+const GOOGLE_WEB_CLIENT_ID = 'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com';
+
 GoogleSignin.configure({
-  webClientId:
-    'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com', // Replace with actual client ID from Firebase Console
+  webClientId: GOOGLE_WEB_CLIENT_ID,
   offlineAccess: true,
 });
 
@@ -91,15 +95,19 @@ class FirebaseAuthService {
   }
 
   // Apple Sign-In (iOS only)
+  // Note: Apple Sign-In requires:
+  // 1. @invertase/react-native-apple-authentication package installed
+  // 2. Apple Sign-In capability enabled in Xcode
+  // 3. Apple Developer account configured with Sign in with Apple
+  // See: https://rnfirebase.io/auth/social-auth#apple
   async signInWithApple(): Promise<FirebaseAuthTypes.UserCredential> {
-    try {
-      // Note: Apple Sign-In requires additional setup in Xcode
-      // and the @invertase/react-native-apple-authentication library
-      // This is a placeholder that will work once the library is properly configured
-      throw new Error('Apple Sign-In requires additional configuration. Please set up @invertase/react-native-apple-authentication.');
-    } catch (error) {
-      throw this.handleAuthError(error);
-    }
+    throw new Error(
+      'Apple Sign-In is not yet configured. To enable Apple Sign-In:\n' +
+      '1. Install @invertase/react-native-apple-authentication\n' +
+      '2. Enable Apple Sign-In capability in Xcode\n' +
+      '3. Configure Apple Developer account\n' +
+      '4. Implement the authentication flow'
+    );
   }
 
   // Sign Out

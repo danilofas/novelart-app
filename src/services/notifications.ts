@@ -5,9 +5,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {Platform, PermissionsAndroid} from 'react-native';
 
 const FCM_TOKEN_KEY = 'fcmToken';
+const PENDING_NAVIGATION_KEY = 'pendingNotificationNavigation';
+
+// Navigation callback type for handling notification opens
+type NavigationCallback = (screen: string, params: Record<string, string>) => void;
 
 class NotificationService {
   private isInitialized = false;
+  private navigationCallback: NavigationCallback | null = null;
 
   // Initialize notification service
   async initialize(): Promise<void> {
@@ -85,10 +90,12 @@ class NotificationService {
   // Send token to backend
   private async sendTokenToBackend(token: string): Promise<void> {
     try {
-      // TODO: Implement API call to send token to backend
-      console.log('FCM Token:', token);
-      // await api.post('/user/fcm-token', { token });
+      // Import api dynamically to avoid circular dependencies
+      const {default: api} = await import('./api');
+      await api.post('/user/fcm-token', {token});
+      console.log('FCM Token sent to backend successfully');
     } catch (error) {
+      // Log error but don't throw - FCM token sync is not critical for app functionality
       console.error('Error sending FCM token to backend:', error);
     }
   }
@@ -164,16 +171,54 @@ class NotificationService {
     const {data} = remoteMessage;
 
     if (data) {
+      const novelId = typeof data.novelId === 'string' ? data.novelId : '';
+      const chapterId = typeof data.chapterId === 'string' ? data.chapterId : '';
+
       // Navigate based on notification data
-      // Example: navigate to specific novel or chapter
-      if (data.novelId) {
-        // TODO: Navigate to novel detail screen
-        console.log('Navigate to novel:', data.novelId);
+      if (chapterId && novelId) {
+        // Navigate to chapter reader
+        this.navigateTo('ChapterReader', {
+          novelId,
+          chapterId,
+        });
+      } else if (novelId) {
+        // Navigate to novel detail screen
+        this.navigateTo('NovelDetail', {novelId});
       }
-      if (data.chapterId) {
-        // TODO: Navigate to chapter reader screen
-        console.log('Navigate to chapter:', data.chapterId);
+    }
+  }
+
+  // Set navigation callback - call this from your navigation setup
+  setNavigationCallback(callback: NavigationCallback): void {
+    this.navigationCallback = callback;
+    // Process any pending navigation
+    this.processPendingNavigation();
+  }
+
+  // Navigate to a screen (or store for later if navigation not ready)
+  private async navigateTo(screen: string, params: Record<string, string>): Promise<void> {
+    if (this.navigationCallback) {
+      this.navigationCallback(screen, params);
+    } else {
+      // Store for later processing when navigation is ready
+      await AsyncStorage.setItem(
+        PENDING_NAVIGATION_KEY,
+        JSON.stringify({screen, params}),
+      );
+    }
+  }
+
+  // Process any pending navigation stored when app wasn't ready
+  private async processPendingNavigation(): Promise<void> {
+    try {
+      const pending = await AsyncStorage.getItem(PENDING_NAVIGATION_KEY);
+      if (pending && this.navigationCallback) {
+        const {screen, params} = JSON.parse(pending);
+        this.navigationCallback(screen, params);
+        await AsyncStorage.removeItem(PENDING_NAVIGATION_KEY);
       }
+    } catch (error) {
+      console.error('Error processing pending navigation:', error);
     }
   }
 
